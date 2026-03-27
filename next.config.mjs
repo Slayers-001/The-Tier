@@ -1,14 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // This is the "Titan-Shield" that ignores errors so the site can go live
   typescript: {
+    // This allows the build to finish even with those 390 red lines
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Keeps the build fast
-  swcMinify: true,
+  // Note: swcMinify is removed as it is now enabled by default
 };
 
 export default nextConfig;
