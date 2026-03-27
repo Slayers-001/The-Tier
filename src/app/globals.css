@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --neon-cyan: #22d3ee;
+  --dark-bg: #020205;
+}
+
+body {
+  background: var(--dark-bg);
+  color: #e1e1e3;
+  overflow-x: hidden;
+}
+
+/* --- THE APEX SCROLLBAR --- */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050508;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #161b22, #22d3ee);
+  border-radius: 10px;
+  border: 2px solid #050508;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #22d3ee;
+  box-shadow: 0 0 20px #22d3ee;
+}
+
+/* --- SELECTION GLOW --- */
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: #fff;
+}
+
+/* --- UTILITY ANIMATIONS --- */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline-effect::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(34, 211, 238, 0.02) 50%,
+    transparent 100%
+  );
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #22d3ee #050508;
+}
