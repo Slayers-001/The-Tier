@@ -1,24 +1,36 @@
-# 🌌 NORDEN-NEXUS // TITAN ARCHITECTURE
-> **Status:** Operational [v12.5]  
-> **Core:** Next.js + TypeScript + Express  
-> **Aesthetic:** High-End Cyber-Nexus / Glassmorphism
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
----
+## Getting Started
 
-## ⚡ MISSION MANIFESTO
-Norden-Nexus is the centralized command hub for the **NordenMC** ecosystem. Engineered for high-performance Minecraft server administration, this platform integrates real-time player data, administrative dashboards, and a 3D-style Jarvis Orb interface.
+First, run the development server:
 
-## 🛠️ TECH STACK
-* **Frontend:** Next.js (App Router) with Rainbow-Glassmorphism UI.
-* **Styling:** Tailwind CSS + Neon Cyan/Magenta accents.
-* **Backend:** Node.js & Express for high-speed data handling.
-* **Data Layer:** Optimized JSON-based player tracking.
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## 📂 DIRECTORY STRUCTURE
-```text
-src/
-├── app/            # Main application logic & layout
-├── components/     # High-end UI modules
-├── data/           # Player archives (players.json)
-├── hooks/          # Custom state logic
-└── lib/            # Server utilities & API wrappers
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
