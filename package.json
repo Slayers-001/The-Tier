@@ -17,6 +17,7 @@
     "react-dom": "19.0.0",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^4.0.0",
     "@tailwindcss/postcss": "^4.0.0",
     "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20"
@@ -25,8 +26,6 @@
     "@types/node": "^20.17.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3"
   }
 }
