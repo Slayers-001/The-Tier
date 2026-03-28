@@ -38,7 +38,7 @@ const INITIAL_CLANS = [
 
 const INITIAL_RULES = [
   "No Unfair Advantages (No Client Mods/Cheats)",
-  "Respect All Community Members (No Toxic Toxicity)",
+  "Respect All Community Members (No Toxicity)",
   "No Griefing in Spawn/Safe Zones",
   "Report All Bugs via Discord Tickets"
 ];
@@ -55,7 +55,7 @@ const INITIAL_RANKS = [
   { id: "om", name: "OMEGA_RANK", description: "Global kit-pvp access, exclusive arena access.", color: "text-fuchsia-400", cost: 500, type: "INR" },
 ];
 
-export default function NordenNexusAstraOmniV22() {
+export default function NordenNexusAstraOmniV23() {
   // --- STATE ENGINES ---
   const [leaderboards, setLeaderboards] = useState(INITIAL_LEADERBOARDS);
   const [clans, setClans] = useState(INITIAL_CLANS);
@@ -75,7 +75,7 @@ export default function NordenNexusAstraOmniV22() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [logs, setLogs] = useState<string[]>(["[SYSTEM] V22_ASTRA_OMNI_LIVE", "[KERNEL] DISCORD_WEBHOOK_ATTACHED"]);
+  const [logs, setLogs] = useState<string[]>(["[SYSTEM] V23_ASTRA_OMNI_LIVE", "[KERNEL] ENTITY_EDITOR_V3_ONLINE"]);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
 
@@ -85,7 +85,7 @@ export default function NordenNexusAstraOmniV22() {
 
   // --- PERSISTENCE ---
   useEffect(() => {
-    const data = localStorage.getItem('norden_v22_save');
+    const data = localStorage.getItem('norden_v23_save');
     if (data) {
       const parsed = JSON.parse(data);
       setLeaderboards(parsed.leaderboards || INITIAL_LEADERBOARDS);
@@ -101,10 +101,10 @@ export default function NordenNexusAstraOmniV22() {
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 100));
   };
 
-  // --- DISCORD WEBHOOK ENGINE ---
+  // --- DISCORD WEBHOOK ENGINE (FIXED) ---
   const sendDiscordAlert = async (type: string, details: string) => {
-    if (!webhookUrl) {
-        pushLog("WEBHOOK_ERR: URL_NOT_FOUND");
+    if (!webhookUrl || !webhookUrl.startsWith("http")) {
+        pushLog("WEBHOOK_ERR: INVALID_URL");
         return;
     }
     const payload = {
@@ -113,9 +113,9 @@ export default function NordenNexusAstraOmniV22() {
       embeds: [{
         title: `⚡ SYSTEM_ALERT: ${type}`,
         description: details,
-        color: type.includes("BAN") ? 16711680 : 65535, // Red for bans, Cyan for others
-        timestamp: new Date(),
-        footer: { text: "Astra Omni V22 // NordenMC" }
+        color: type.includes("BAN") ? 16711680 : 65535,
+        timestamp: new Date().toISOString(),
+        footer: { text: "NordenMC Management Panel" }
       }]
     };
     try {
@@ -126,22 +126,39 @@ export default function NordenNexusAstraOmniV22() {
       });
       pushLog(`DISCORD: ALERT_SENT_${type}`);
     } catch (e) {
-      pushLog("DISCORD: FAILED_TO_SEND");
+      pushLog("DISCORD: NETWORK_FAILURE");
     }
   };
 
   const syncVault = () => {
     const bundle = { leaderboards, clans, rules, userXP, globalRanks, webhookUrl };
-    localStorage.setItem('norden_v22_save', JSON.stringify(bundle));
+    localStorage.setItem('norden_v23_save', JSON.stringify(bundle));
     pushLog("OMNI_SYNC: VAULT_COMMITTED");
-    alert("DATABASE UPDATED.");
+    alert("SYSTEM UPDATED.");
+  };
+
+  // --- ENTITY EDITING LOGIC ---
+  const editPlayerStat = (idx: number, field: string, value: any) => {
+    setLeaderboards(prev => {
+      const updated = { ...prev };
+      const currentModeData = [...updated[activeMode]];
+      currentModeData[idx] = { ...currentModeData[idx], [field]: value };
+      
+      // If name is edited, auto-update the avatar
+      if (field === 'name') {
+        currentModeData[idx].img = `https://mc-heads.net/avatar/${value}/100`;
+      }
+      
+      updated[activeMode] = currentModeData;
+      return updated;
+    });
+    pushLog(`ENTITY_UPDATE: ${field.toUpperCase()} @ INDEX ${idx}`);
   };
 
   // --- INTERACTION LOGIC ---
   const handleChallenge = (player: any) => {
-    const matchId = Math.random().toString(36).substring(7).toUpperCase();
-    pushLog(`DUEL: CHALLENGE_${matchId}_VS_${player.name}`);
-    alert(`CHALLENGE ${matchId} DISPATCHED.`);
+    pushLog(`DUEL: CHALLENGE_SENT_VS_${player.name}`);
+    alert(`CHALLENGE DISPATCHED TO ${player.name}.`);
   };
 
   const handleShare = (player: any) => {
@@ -211,13 +228,10 @@ export default function NordenNexusAstraOmniV22() {
   };
 
   const toggleBan = (idx: number) => {
-    setLeaderboards(prev => {
-      const updated = { ...prev };
-      const player = updated[activeMode][idx];
-      player.banned = !player.banned;
-      sendDiscordAlert(player.banned ? "SECURITY_BAN" : "SECURITY_UNBAN", `User ${player.name} has been ${player.banned ? 'banned' : 'restored'}.`);
-      return updated;
-    });
+    const player = leaderboards[activeMode][idx];
+    const newStatus = !player.banned;
+    editPlayerStat(idx, 'banned', newStatus);
+    sendDiscordAlert(newStatus ? "SECURITY_BAN" : "SECURITY_UNBAN", `User ${player.name} has been ${newStatus ? 'banned' : 'restored'}.`);
   };
 
   const filteredLeaderboard = useMemo(() => {
@@ -232,7 +246,7 @@ export default function NordenNexusAstraOmniV22() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(6,182,212,0.1)_0%,_transparent_60%)]"></div>
       </div>
 
-      {/* 🚀 SIDEBAR */}
+      {/* 🚀 SIDEBAR (FULL RESTORED) */}
       <aside className="w-20 hover:w-64 transition-all duration-[800ms] border-r border-white/5 bg-black/80 backdrop-blur-[100px] flex flex-col items-center py-10 z-[60] group shadow-2xl overflow-hidden">
         <div className="mb-14 cursor-pointer" onClick={() => setActiveMenu('DASHBOARD')}>
           <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-2xl flex items-center justify-center group-hover:rotate-[360deg] transition-all duration-1000">
@@ -314,6 +328,45 @@ export default function NordenNexusAstraOmniV22() {
               </motion.div>
             )}
 
+            {activeMenu === 'CLANS' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                 {clans.map((clan, i) => (
+                   <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-[3rem] relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[80px]" />
+                      <h3 className={`text-4xl font-black italic uppercase mb-2 ${clan.color}`}>{clan.name}</h3>
+                      <p className="text-[10px] text-white/30 tracking-widest mb-6">LEADER: {clan.leader.toUpperCase()}</p>
+                      <div className="flex justify-between items-end">
+                         <div>
+                            <p className="text-[10px] text-white/20 uppercase">Members</p>
+                            <p className="text-2xl font-black italic">{clan.members}</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-[10px] text-white/20 uppercase">Dominance</p>
+                            <p className="text-2xl font-black italic text-cyan-400">{clan.dominance}%</p>
+                         </div>
+                      </div>
+                   </div>
+                 ))}
+              </motion.div>
+            )}
+
+            {activeMenu === 'MEDIA' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 {media.map((item) => (
+                   <div key={item.id} className="group cursor-pointer">
+                      <div className="aspect-video rounded-[2.5rem] overflow-hidden relative border border-white/10 mb-6">
+                         <img src={item.thumb} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-1000" />
+                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                            <PlayCircle size={48} className="text-white" />
+                         </div>
+                      </div>
+                      <h4 className="text-xl font-black italic uppercase leading-none mb-2">{item.title}</h4>
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest">{item.views} VIEWS • {item.author}</p>
+                   </div>
+                 ))}
+              </motion.div>
+            )}
+
             {activeMenu === 'LOGS' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                  <div className="bg-black/50 border border-white/10 rounded-[3rem] p-8 font-mono h-[600px] overflow-hidden flex flex-col">
@@ -341,29 +394,28 @@ export default function NordenNexusAstraOmniV22() {
         </main>
       </div>
 
-      {/* 🔐 ADMIN PANEL (EXTENDED) */}
+      {/* 🔐 ADMIN PANEL (RESTORING ALL FEATURES + ADDING EDITS) */}
       <AnimatePresence>
         {isAdminOpen && (
           <motion.div initial={{ x: 1000 }} animate={{ x: 0 }} exit={{ x: 1000 }} className="fixed right-0 top-0 h-full w-[600px] bg-[#020206] border-l border-white/10 z-[100] p-10 shadow-2xl backdrop-blur-3xl overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-center mb-10 sticky top-0 bg-[#020206] py-4 border-b border-white/10">
-              <h2 className="text-3xl font-black italic uppercase text-cyan-400 flex items-center gap-3"><Gavel /> GOD_MODE</h2>
+            <div className="flex justify-between items-center mb-10 sticky top-0 bg-[#020206] py-4 border-b border-white/10 z-20">
+              <h2 className="text-3xl font-black italic uppercase text-cyan-400 flex items-center gap-3"><Gavel /> GOD_MODE_V23</h2>
               <button onClick={() => setIsAdminOpen(false)} className="bg-red-500/10 text-red-500 px-6 py-2 rounded-full font-black text-[10px] uppercase">EXIT</button>
             </div>
 
             {!isAuthorized ? (
               <div className="py-20 flex flex-col items-center">
-                <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="PASSKEY..." className="bg-white/5 border border-white/10 w-full p-6 rounded-3xl text-center text-2xl outline-none focus:border-cyan-500 mb-6" />
+                <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (passwordInput === PASSKEY ? setIsAuthorized(true) : alert("WRONG_KEY"))} placeholder="PASSKEY..." className="bg-white/5 border border-white/10 w-full p-6 rounded-3xl text-center text-2xl outline-none focus:border-cyan-500 mb-6" />
                 <button onClick={() => passwordInput === PASSKEY ? setIsAuthorized(true) : alert("WRONG_KEY")} className="w-full bg-white text-black font-black py-4 rounded-3xl uppercase tracking-widest">AUTHORIZE</button>
               </div>
             ) : (
               <div className="space-y-12 pb-20">
-                {/* 📡 WEBHOOK CONTROLLER (NEW) */}
+                {/* 📡 WEBHOOK CONTROLLER */}
                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
                    <h4 className="text-xl font-black italic uppercase mb-4 flex items-center gap-2 text-fuchsia-400"><Radio size={18}/> DISCORD_BRIDGE</h4>
-                   <p className="text-[10px] text-white/30 mb-4 tracking-widest">ENTER WEBHOOK URL TO SYNC ACTIONS TO DISCORD CHANNEL</p>
                    <div className="flex gap-2">
                       <input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="HTTPS://DISCORD.COM/API/WEBHOOKS/..." className="flex-1 bg-black/40 border border-white/10 p-3 rounded-xl text-[10px] outline-none focus:border-fuchsia-500" />
-                      <button onClick={() => sendDiscordAlert("TEST_PING", "Connection Established with Astra Omni Core.")} className="bg-fuchsia-500 text-white p-3 rounded-xl"><Send size={18}/></button>
+                      <button onClick={() => sendDiscordAlert("TEST_PING", "Connection Verified.")} className="bg-fuchsia-500 text-white p-3 rounded-xl"><Send size={18}/></button>
                    </div>
                 </div>
 
@@ -372,29 +424,49 @@ export default function NordenNexusAstraOmniV22() {
                    <GodCommand icon={<Power />} title="MAINT_MODE" onClick={toggleMaintenance} color={maintenanceMode ? "text-green-500" : "text-yellow-500"} bg="bg-yellow-500/5" />
                 </div>
 
-                {/* 👤 ENTITY CONTROL */}
+                {/* 👤 ENTITY CONTROL (WITH FULL EDITING CAPABILITIES) */}
                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
-                   <h4 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2"><Edit3 size={18}/> ENTITY_MGMT // {activeMode}</h4>
-                   <div className="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2">
+                   <h4 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2 text-cyan-400"><Edit3 size={18}/> ENTITY_EDITOR // {activeMode}</h4>
+                   <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                      {leaderboards[activeMode]?.map((p, idx) => (
-                       <div key={idx} className="bg-black p-4 rounded-xl border border-white/5 flex items-center justify-between group">
-                          <div className="flex items-center gap-4">
-                             <img src={p.img} className="w-8 h-8 rounded-lg" />
-                             <span className="text-sm font-black italic uppercase">{p.name}</span>
+                       <div key={idx} className="bg-black/80 p-5 rounded-2xl border border-white/5 space-y-4">
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-4">
+                                <img src={p.img} className="w-10 h-10 rounded-xl" />
+                                <input value={p.name} onChange={e => editPlayerStat(idx, 'name', e.target.value)} className="bg-transparent font-black italic text-sm outline-none text-cyan-400 w-32" />
+                             </div>
+                             <button onClick={() => toggleBan(idx)} className={`p-2 rounded-lg ${p.banned ? 'bg-red-500 text-white' : 'bg-white/5 text-red-500'}`}><Hammer size={16}/></button>
                           </div>
-                          <button onClick={() => toggleBan(idx)} className={`p-2 rounded-lg ${p.banned ? 'bg-red-500' : 'bg-white/5'}`}><Hammer size={14}/></button>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                             <div className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+                                <p className="text-[8px] font-black text-white/20 uppercase mb-1">K/D Ratio</p>
+                                <input value={p.kd} onChange={e => editPlayerStat(idx, 'kd', e.target.value)} className="bg-transparent font-black text-xs outline-none text-white w-full" />
+                             </div>
+                             <div className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+                                <p className="text-[8px] font-black text-white/20 uppercase mb-1">XP Points</p>
+                                <input value={p.xp} onChange={e => editPlayerStat(idx, 'xp', parseInt(e.target.value) || 0)} className="bg-transparent font-black text-xs outline-none text-white w-full" />
+                             </div>
+                          </div>
+
+                          <div className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+                             <p className="text-[8px] font-black text-white/20 uppercase mb-1">Status Tag</p>
+                             <input value={p.tag} onChange={e => editPlayerStat(idx, 'tag', e.target.value)} className="bg-transparent font-black text-[10px] outline-none text-white/80 w-full" />
+                          </div>
                        </div>
                      ))}
                    </div>
-                   <div className="bg-black/40 p-4 rounded-2xl border border-white/5 space-y-4">
-                      <input value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} placeholder="NAME" className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs" />
+
+                   <div className="mt-8 bg-black/40 p-4 rounded-2xl border border-white/5 space-y-4">
+                      <p className="text-[10px] font-black text-white/20 uppercase">Add_New_Entity</p>
+                      <input value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} placeholder="PLAYER_NAME" className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs outline-none focus:border-cyan-400" />
                       <button onClick={injectPlayerNode} className="w-full bg-cyan-500 text-black font-black py-3 rounded-xl text-[10px] uppercase">INJECT_PLAYER</button>
                    </div>
                 </div>
 
                 {/* 📝 RULEBOOK CONTROL */}
                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
-                   <h4 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2"><Shield size={18}/> RULE_PROTOCOL</h4>
+                   <h4 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2 text-indigo-400"><Shield size={18}/> RULE_PROTOCOL</h4>
                    <div className="space-y-3 mb-4">
                       {rules.map((rule, idx) => (
                         <div key={idx} className="flex items-center gap-4 bg-black p-3 rounded-xl border border-white/5">
@@ -404,12 +476,12 @@ export default function NordenNexusAstraOmniV22() {
                       ))}
                    </div>
                    <div className="flex gap-2">
-                      <input value={newRule} onChange={e => setNewRule(e.target.value)} placeholder="PROTOCOL..." className="flex-1 bg-white/5 border border-white/10 p-3 rounded-xl text-xs" />
-                      <button onClick={addRule} className="bg-fuchsia-500 text-white p-3 rounded-xl"><UserPlus size={18}/></button>
+                      <input value={newRule} onChange={e => setNewRule(e.target.value)} placeholder="NEW_PROTOCOL..." className="flex-1 bg-white/5 border border-white/10 p-3 rounded-xl text-xs outline-none" />
+                      <button onClick={addRule} className="bg-indigo-500 text-white p-3 rounded-xl"><UserPlus size={18}/></button>
                    </div>
                 </div>
 
-                <button onClick={syncVault} className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-black py-6 rounded-[2rem] shadow-xl uppercase tracking-widest flex items-center justify-center gap-4 text-lg">
+                <button onClick={syncVault} className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-black py-6 rounded-[2rem] shadow-xl uppercase tracking-widest flex items-center justify-center gap-4 text-lg hover:scale-[1.02] transition-all">
                   <Save size={24} /> COMMIT_SYSTEM_DATA
                 </button>
               </div>
@@ -418,23 +490,23 @@ export default function NordenNexusAstraOmniV22() {
         )}
       </AnimatePresence>
 
-      {/* 👤 PLAYER MODAL (LEGACY) */}
+      {/* 👤 PLAYER MODAL (LEGACY RESTORED) */}
       <AnimatePresence>
         {selectedPlayer && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-8 bg-black/90 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-black border border-white/10 w-full max-w-4xl rounded-[4rem] p-12 relative shadow-2xl">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-8 bg-black/90 backdrop-blur-xl" onClick={() => setSelectedPlayer(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-black border border-white/10 w-full max-w-4xl rounded-[4rem] p-12 relative shadow-2xl" onClick={e => e.stopPropagation()}>
               <button onClick={() => setSelectedPlayer(null)} className="absolute top-8 right-8 text-white/20 hover:text-white"><X size={32} /></button>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="text-center">
-                  <img src={selectedPlayer.img} className="w-64 h-64 rounded-[3rem] mx-auto border-4 border-cyan-400 mb-6" />
+                  <img src={selectedPlayer.img} className="w-64 h-64 rounded-[3rem] mx-auto border-4 border-cyan-400 mb-6 shadow-[0_0_50px_rgba(6,182,212,0.3)]" />
                   <h2 className="text-5xl font-black italic uppercase tracking-tighter">{selectedPlayer.name}</h2>
                   <p className="text-cyan-400 font-black tracking-widest mt-2">{selectedPlayer.tag}</p>
                 </div>
                 <div className="flex flex-col justify-center gap-8">
-                  <StatRow icon={<Target />} label="K/D" value={selectedPlayer.kd} />
-                  <StatRow icon={<Flame />} label="XP" value={selectedPlayer.xp.toLocaleString()} />
+                  <StatRow icon={<Target />} label="K/D RATIO" value={selectedPlayer.kd} />
+                  <StatRow icon={<Flame />} label="SYSTEM_XP" value={selectedPlayer.xp.toLocaleString()} />
                   <div className="flex gap-4 pt-8">
-                    <button onClick={() => handleChallenge(selectedPlayer)} className="flex-1 bg-white text-black font-black py-4 rounded-full uppercase tracking-widest flex items-center justify-center gap-4"><Swords size={20}/> DUEL</button>
+                    <button onClick={() => handleChallenge(selectedPlayer)} className="flex-1 bg-white text-black font-black py-4 rounded-full uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-cyan-400 transition-all"><Swords size={20}/> DUEL</button>
                     <button onClick={() => handleShare(selectedPlayer)} className="w-14 h-14 bg-white/5 border border-white/10 flex items-center justify-center rounded-full hover:bg-white hover:text-black transition-all">
                       {isCopied ? <Check className="text-green-500" /> : <Share2 />}
                     </button>
@@ -449,7 +521,7 @@ export default function NordenNexusAstraOmniV22() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (FULL RESTORE) ---
 function MenuButton({ icon, label, active, onClick }: any) {
   return (
     <button onClick={onClick} className={`flex items-center gap-4 w-full py-4 px-4 rounded-2xl transition-all relative group ${active ? 'bg-cyan-500/10 text-cyan-400' : 'text-white/20 hover:text-white'}`}>
@@ -462,11 +534,11 @@ function MenuButton({ icon, label, active, onClick }: any) {
 function PodiumCard({ player, rank, onClick }: any) {
   const is1 = rank === 1;
   return (
-    <div onClick={onClick} className={`cursor-pointer bg-gradient-to-b ${is1 ? 'from-cyan-500/20 to-transparent border-cyan-500/30' : 'from-white/5 to-transparent border-white/5'} border-2 p-8 rounded-[4rem] text-center relative group hover:-translate-y-2 transition-all`}>
+    <div onClick={onClick} className={`cursor-pointer bg-gradient-to-b ${is1 ? 'from-cyan-500/20 to-transparent border-cyan-500/30 shadow-[0_30px_60px_rgba(6,182,212,0.1)]' : 'from-white/5 to-transparent border-white/5'} border-2 p-8 rounded-[4rem] text-center relative group hover:-translate-y-2 transition-all`}>
       {is1 && <Crown className="text-yellow-400 absolute -top-8 left-1/2 -translate-x-1/2 animate-bounce" size={48} />}
-      <img src={player.img} className="w-32 h-32 rounded-[2.5rem] mx-auto mb-6 border-4 border-white/10 group-hover:border-cyan-400" />
+      <img src={player.img} className="w-32 h-32 rounded-[2.5rem] mx-auto mb-6 border-4 border-white/10 group-hover:border-cyan-400 group-hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all" />
       <h4 className="text-3xl font-black italic uppercase leading-none">{player.name}</h4>
-      <p className="text-[10px] font-black text-white/20 tracking-widest mt-2">{player.tag}</p>
+      <p className="text-[10px] font-black text-white/20 tracking-widest mt-2 uppercase">{player.tag}</p>
     </div>
   );
 }
@@ -478,7 +550,10 @@ function PlayerListRow({ player, onClick }: any) {
       <div className="flex items-center gap-8">
         <span className="text-4xl font-black italic text-white/5 w-16">{player.rank}</span>
         <img src={player.img} className="w-14 h-14 rounded-2xl border border-white/10" />
-        <h4 className="text-2xl font-black italic uppercase group-hover:text-cyan-400 transition-colors">{player.name}</h4>
+        <div>
+           <h4 className="text-2xl font-black italic uppercase group-hover:text-cyan-400 transition-colors">{player.name}</h4>
+           <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">{player.tag}</p>
+        </div>
       </div>
       <div className="flex items-center gap-10">
         <p className="text-4xl font-black italic text-white/80">{player.kd}</p>
@@ -493,7 +568,7 @@ function MarketCard({ rank, onBuy }: any) {
     <div className="bg-black/40 border border-white/10 p-8 rounded-[3rem] text-center group hover:border-cyan-500/30 transition-all">
       <div className="w-16 h-16 bg-cyan-500/5 rounded-2xl mx-auto mb-6 flex items-center justify-center border border-cyan-500/10"><ShoppingCart className="text-cyan-400" /></div>
       <h3 className={`text-3xl font-black italic mb-4 uppercase ${rank.color}`}>{rank.name}</h3>
-      <p className="text-[10px] text-white/20 mb-8 px-4 leading-relaxed">{rank.description}</p>
+      <p className="text-[10px] text-white/20 mb-8 px-4 leading-relaxed uppercase">{rank.description}</p>
       <div className="flex items-center justify-between bg-black p-4 rounded-3xl border border-white/5">
         <span className="text-xl font-black italic text-white">{rank.cost} {rank.type}</span>
         <button onClick={onBuy} className="bg-white text-black text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-widest">BUY</button>
