@@ -1,489 +1,429 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Crown, Trophy, ChevronRight, Zap, Activity, LayoutDashboard, 
   ShieldCheck, Users, Settings, BarChart3, Swords, Target, Flame, 
-  Database, Lock, Unlock, AlertTriangle, Terminal, Cpu, HardDrive, 
-  Network, Globe, Radio, Hash, ShoppingCart, Music, Signal, Send, 
-  ArrowUpRight, X, MessageSquare, ShieldAlert, BellRing, UserPlus, 
-  Filter, Layers, RefreshCw, Star, User, Ban, Edit3, Save, Power, Crosshair
+  Database, Lock, Unlock, Terminal, Radio, Hash, ShoppingCart, Music, 
+  ArrowUpRight, X, ShieldAlert, Star, Edit3, Save, Power, Crosshair, Package,
+  Layers, HardDrive, Cpu, ExternalLink, Trash2, UserPlus, RefreshCcw, 
+  AlertTriangle, CheckCircle2, Gavel, Globe, ZapOff
 } from 'lucide-react';
 
-// --- TITAN HARDCODED CONFIG ---
+// --- TITAN CONFIG ---
 const PASSKEY = "PVP_PROPLE";
 const DISCORD_AVATAR = "https://mc-heads.net/avatar/Utkarsh/100";
-const GLOBAL_WEBHOOK = "https://discord.com/api/webhooks/1487157795169243236/7KlEaV40W3BPxlU0K276i8VO6gu5mk9Hu-hdmEBplKDSmagLIvuxDfMnhK8THr3FmdhV";
+const SERVER_IP = "PLAY.NORDENMC.COM";
 
-const GAME_MODES = ["KITPVP", "CRYSTAL", "CART", "MACE", "AXE", "NETHERPOT"];
+// --- GAME MODES ---
+const GAME_MODES = [
+  "OVERALL", "LTMs", "Vanilla", "UHC", "Pot", 
+  "NethOP", "SMP", "Sword", "Axe", "Mace"
+];
 
-// INITIAL LEADERBOARD DATABASE (MULTI-MODE)
-const INITIAL_LEADERBOARDS: Record<string, any[]> = {
-  KITPVP: [
-    { rank: "01", name: "UTKARSH", tag: "NORDEN_OWNER", statType: "KILLS", kd: "12.4", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-    { rank: "02", name: "SHIVAM", tag: "KIT_MASTER", statType: "KILLS", kd: "8.1", img: "https://mc-heads.net/avatar/Shivam/100" },
-    { rank: "03", name: "SATYARTH", tag: "VETERAN", statType: "KILLS", kd: "6.5", img: "https://mc-heads.net/avatar/Satyarth/100" },
+// --- INITIAL DATA SEED ---
+const SEED_DATA: Record<string, any[]> = {
+  OVERALL: [
+    { rank: "01", name: "UTKARSH", tag: "NORDEN_LEGEND #1", statType: "HT1", kd: "12.4", img: "https://mc-heads.net/avatar/Utkarsh/100", xp: 125000 },
+    { rank: "02", name: "SATYARTH", tag: "GLOBAL_ELITE #2", statType: "HT1", kd: "11.1", img: "https://mc-heads.net/avatar/Satyarth/100", xp: 112000 },
   ],
-  CRYSTAL: [
-    { rank: "01", name: "SATYARTH", tag: "GLOBAL_ELITE", statType: "HT1", kd: "4.8", img: "https://mc-heads.net/avatar/Satyarth/100" },
-    { rank: "02", name: "UTKARSH", tag: "NORDEN_OWNER", statType: "HT1", kd: "4.5", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-    { rank: "03", name: "SHIVAM", tag: "CRYSTAL_GOD", statType: "HT1", kd: "3.9", img: "https://mc-heads.net/avatar/Shivam/100" },
-  ],
-  CART: [
-    { rank: "01", name: "SHIVAM", tag: "BOMBER", statType: "BLASTS", kd: "9.2", img: "https://mc-heads.net/avatar/Shivam/100" },
-    { rank: "02", name: "UTKARSH", tag: "CART_KING", statType: "BLASTS", kd: "7.4", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-    { rank: "03", name: "SATYARTH", tag: "DEMOLITION", statType: "BLASTS", kd: "6.1", img: "https://mc-heads.net/avatar/Satyarth/100" },
-  ],
-  MACE: [
-    { rank: "01", name: "UTKARSH", tag: "SMASH_PRO", statType: "CRITS", kd: "15.0", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-    { rank: "02", name: "SATYARTH", tag: "HEAVY_HITTER", statType: "CRITS", kd: "11.2", img: "https://mc-heads.net/avatar/Satyarth/100" },
-    { rank: "03", name: "SHIVAM", tag: "BRUTE", statType: "CRITS", kd: "9.8", img: "https://mc-heads.net/avatar/Shivam/100" },
-  ],
-  AXE: [
-    { rank: "01", name: "SATYARTH", tag: "SHIELD_BREAKER", statType: "DMG", kd: "5.5", img: "https://mc-heads.net/avatar/Satyarth/100" },
-    { rank: "02", name: "SHIVAM", tag: "LUMBERJACK", statType: "DMG", kd: "4.9", img: "https://mc-heads.net/avatar/Shivam/100" },
-    { rank: "03", name: "UTKARSH", tag: "EXECUTIONER", statType: "DMG", kd: "4.2", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-  ],
-  NETHERPOT: [
-    { rank: "01", name: "SHIVAM", tag: "ALCHEMIST", statType: "POTS", kd: "8.8", img: "https://mc-heads.net/avatar/Shivam/100" },
-    { rank: "02", name: "UTKARSH", tag: "BREW_MASTER", statType: "POTS", kd: "7.6", img: "https://mc-heads.net/avatar/Utkarsh/100" },
-    { rank: "03", name: "SATYARTH", tag: "TOXIC", statType: "POTS", kd: "6.3", img: "https://mc-heads.net/avatar/Satyarth/100" },
+  Mace: [
+    { rank: "01", name: "UTKARSH", tag: "SMASH_GOD", statType: "HT1", kd: "18.2", img: "https://mc-heads.net/avatar/Utkarsh/100", xp: 5000 },
   ]
 };
 
-export default function NordenNexusV17() {
-  // --- CORE STATE ENGINES ---
+// Initialize empty arrays for missing modes
+GAME_MODES.forEach(m => { if(!SEED_DATA[m]) SEED_DATA[m] = []; });
+
+const INITIAL_RANKS = [
+  { id: "vip", name: "VIP_RANK", description: "Permanent command access & basic kits.", color: "text-green-400", price: "XP_UPLINK" },
+  { id: "el", name: "ELITE_RANK", description: "Animated tags, priority node access.", color: "text-cyan-400", price: "XP_UPLINK" },
+  { id: "om", name: "OMEGA_RANK", description: "Global kit-pvp access, exclusive arena access.", color: "text-fuchsia-400", price: "₹499" },
+  { id: "nx", name: "NEXUS_SUPREME", description: "Animated prefix, total access pass.", color: "text-fuchsia-300", price: "₹999" },
+];
+
+export default function NordenNexusTitanV18_3() {
+  // --- CORE STATE ---
+  const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>(SEED_DATA);
+  const [globalRanks, setGlobalRanks] = useState(INITIAL_RANKS);
   const [activeMenu, setActiveMenu] = useState('DASHBOARD');
-  const [activeMode, setActiveMode] = useState('KITPVP');
+  const [activeMode, setActiveMode] = useState('OVERALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // --- ADMIN & SECURITY ---
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  
-  // --- PURCHASE MODAL STATE ---
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState('');
-  const [mcUsername, setMcUsername] = useState('');
+  const [logs, setLogs] = useState<string[]>(["[SYSTEM] NORDEN_NEXUS_V18.3 ONLINE", "[KERNEL] ALL_SYSTEMS_FUNCTIONAL"]);
 
-  // --- ADMIN SYSTEMS STATE ---
-  const [adminXp, setAdminXp] = useState(1000);
-  const [ipBanInput, setIpBanInput] = useState('');
-  const [bannedIps, setBannedIps] = useState<string[]>([]);
-  
-  // --- WEBHOOK & NETWORK STATES ---
-  const [isWebhookActive, setIsWebhookActive] = useState(true);
-  const [webhookStatus, setWebhookStatus] = useState('STABLE');
-  const [onlinePlayers, setOnlinePlayers] = useState(2841);
+  // --- ADMIN INPUT STATES ---
+  const [newRank, setNewRank] = useState({ name: '', price: '', desc: '', color: 'text-cyan-400' });
+  const [newPlayer, setNewPlayer] = useState({ name: '', tag: '', kd: '', statType: 'HT1' });
 
-  // --- AUDIO / LOGS / SPENDERS ---
-  const [ytLink, setYtLink] = useState('');
-  const [currentTrackId, setCurrentTrackId] = useState('');
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const [topSpenders, setTopSpenders] = useState([
-    { name: "UTKARSH", amount: 15 },
-    { name: "SATYARTH", amount: 11 },
-    { name: "SHIVAM", amount: 7 }
-  ]);
-  const [logs, setLogs] = useState<string[]>([
-    "[SYSTEM] V17_CYBER_NEXUS ONLINE",
-    "[UI] RAINBOW_GLASSMORPHISM_RENDERED",
-    "[DB] MULTI_MODE_LEADERBOARDS_SYNCED",
-    "[MARKET] RANKS_INJECTED_FLY_PURGED"
-  ]);
-
-  // --- MULTI-MODE LEADERBOARD STATE ---
-  const [leaderboards, setLeaderboards] = useState(INITIAL_LEADERBOARDS);
-
-  // --- DISCORD WEBHOOK DISPATCHER ---
-  const sendDiscordNotification = useCallback(async (title: string, message: string, color: number = 13631487, fields: any[] = []) => {
-    if (!isWebhookActive) return;
-
-    const embed = {
-      username: "NordenMC Cyber Nexus",
-      avatar_url: DISCORD_AVATAR,
-      embeds: [{
-        title: title,
-        description: message,
-        color: color,
-        fields: fields,
-        timestamp: new Date().toISOString(),
-        footer: { text: "V17 Cyber | Network Intelligence" }
-      }]
-    };
-
-    try {
-      await fetch(GLOBAL_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(embed)
-      });
-      setWebhookStatus('STABLE');
-    } catch (err) {
-      setWebhookStatus('INTERRUPTED');
-      pushLog("[CRITICAL] DISCORD_UPLINK_LOST");
-    }
-  }, [isWebhookActive]);
+  // --- PERSISTENCE HOOKS ---
+  useEffect(() => {
+    const savedDB = localStorage.getItem('norden_v18_db');
+    const savedRanks = localStorage.getItem('norden_v18_ranks');
+    if (savedDB) setLeaderboards(JSON.parse(savedDB));
+    if (savedRanks) setGlobalRanks(JSON.parse(savedRanks));
+    pushLog("VAULT_SYNC: SUCCESSFUL");
+  }, []);
 
   const pushLog = (msg: string) => {
-    setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 15));
+    setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 30));
   };
 
-  // --- MARKET PURCHASE HANDLER ---
-  const initPurchase = (itemName: string) => {
-    setSelectedItem(itemName);
-    setIsPurchaseModalOpen(true);
+  const commitToVault = () => {
+    localStorage.setItem('norden_v18_db', JSON.stringify(leaderboards));
+    localStorage.setItem('norden_v18_ranks', JSON.stringify(globalRanks));
+    pushLog("CRITICAL_SAVE: ALL_DATA_COMMITTED");
+    alert("NEXUS VAULT SYNCHRONIZED.");
   };
 
-  const finalizePurchase = () => {
-    if (!mcUsername.trim()) {
-      alert("CRITICAL: Minecraft Username Required.");
-      return;
-    }
-    pushLog(`[MARKET] RANK SECURED: ${selectedItem} BY ${mcUsername}`);
-    
-    setTopSpenders(prev => {
-      const exists = prev.find(s => s.name.toUpperCase() === mcUsername.toUpperCase());
-      if (exists) {
-        return prev.map(s => s.name.toUpperCase() === mcUsername.toUpperCase() ? { ...s, amount: s.amount + 1 } : s);
-      }
-      return [...prev, { name: mcUsername.toUpperCase(), amount: 1 }].slice(-5);
+  // --- LEADERBOARD LOGIC ---
+  const updatePlayer = (idx: number, field: string, value: string) => {
+    const updated = { ...leaderboards };
+    updated[activeMode][idx] = { ...updated[activeMode][idx], [field]: value };
+    setLeaderboards(updated);
+  };
+
+  const deletePlayer = (idx: number) => {
+    const updated = { ...leaderboards };
+    updated[activeMode].splice(idx, 1);
+    setLeaderboards(updated);
+    pushLog(`PLAYER_REMOVED_FROM_${activeMode}`);
+  };
+
+  const injectPlayer = () => {
+    if (!newPlayer.name) return;
+    const updated = { ...leaderboards };
+    const nextRank = (updated[activeMode].length + 1).toString().padStart(2, '0');
+    updated[activeMode].push({
+      ...newPlayer,
+      rank: nextRank,
+      img: `https://mc-heads.net/avatar/${newPlayer.name}/100`,
+      xp: 0
     });
-
-    sendDiscordNotification("🛒 Global Rank Secured", `A player has purchased a rank from the Cyber Market.`, 13631487, [
-        { name: "👤 Identity", value: `\`${mcUsername}\``, inline: true },
-        { name: "📦 Rank/Item", value: `\`${selectedItem}\``, inline: true }
-    ]);
-
-    setIsPurchaseModalOpen(false);
-    setMcUsername('');
-    alert(`SUCCESS: ${selectedItem} dispatched to ${mcUsername}.`);
+    setLeaderboards(updated);
+    setNewPlayer({ name: '', tag: '', kd: '', statType: 'HT1' });
+    pushLog(`MANUAL_INJECTION: ${newPlayer.name} -> ${activeMode}`);
   };
 
-  // --- ADMIN SYSTEMS ---
-  const grantSelfXp = (amount: number) => {
-    setAdminXp(prev => prev + amount);
-    pushLog(`[XP_INJECT] GRANTED +${amount} XP TO UTKARSH`);
-  };
-
-  const executeIpBan = () => {
-    if(!ipBanInput.trim()) return;
-    setBannedIps(prev => [ipBanInput, ...prev]);
-    pushLog(`[SECURITY] NEON_BAN_ENFORCED: ${ipBanInput}`);
-    sendDiscordNotification("🔨 Network Ban Deployed", `Malicious IP obliterated from the Cyber Nexus.`, 16711680, [
-        { name: "Target IPv4", value: `\`${ipBanInput}\``, inline: false },
-        { name: "Executor", value: "Utkarsh Pandey", inline: false }
-    ]);
-    setIpBanInput('');
-    alert("TARGET IP BLACKLISTED.");
-  };
-
-  // Edits the currently active game mode's leaderboard
-  const handleLeaderboardEdit = (index: number, field: string, value: string) => {
-    setLeaderboards(prev => {
-      const activeBoard = [...prev[activeMode]];
-      activeBoard[index] = { ...activeBoard[index], [field]: value };
-      return { ...prev, [activeMode]: activeBoard };
-    });
-  };
-
-  const handleAuth = () => {
-    if (passwordInput === PASSKEY) {
-      setIsAuthorized(true);
-      pushLog("[SUCCESS] V17_CYBER_ROOT_GRANTED");
-      sendDiscordNotification("⚡ Cyber Root Login", "Administrator Utkarsh has accessed the Nexus Core.", 13631487);
-    } else {
-      pushLog("[WARN] INVALID_KEY_ENTRY");
+  const wipeMode = () => {
+    if (confirm(`CRITICAL: Wipe all data for ${activeMode}?`)) {
+      const updated = { ...leaderboards };
+      updated[activeMode] = [];
+      setLeaderboards(updated);
+      pushLog(`CORE_WIPE: ${activeMode}_CLEARED`);
     }
   };
 
-  const syncMusic = () => {
-    const videoIdMatch = ytLink.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([^& \n]+)/);
-    if (videoIdMatch) {
-      setCurrentTrackId(videoIdMatch[1]);
-      setIsMusicPlaying(true);
-      pushLog(`[AUDIO] NEON_RELAY_ACTIVE: ${videoIdMatch[1]}`);
-    }
+  // --- RANK LOGIC ---
+  const updateRank = (idx: number, field: string, value: string) => {
+    const updated = [...globalRanks];
+    updated[idx] = { ...updated[idx], [field]: value };
+    setGlobalRanks(updated);
   };
 
-  const currentPlayers = leaderboards[activeMode];
+  const createRank = () => {
+    if (!newRank.name) return;
+    setGlobalRanks([...globalRanks, { 
+      id: Date.now().toString(), 
+      ...newRank, 
+      name: newRank.name.toUpperCase() 
+    }]);
+    setNewRank({ name: '', price: '', desc: '', color: 'text-cyan-400' });
+    pushLog(`NEW_RANK_CREATED: ${newRank.name}`);
+  };
+
+  // --- RENDER HELPERS ---
+  const filteredPlayers = useMemo(() => {
+    const data = leaderboards[activeMode] || [];
+    return searchQuery 
+      ? data.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())) 
+      : data;
+  }, [leaderboards, activeMode, searchQuery]);
 
   return (
-    <div className="flex min-h-screen font-sans overflow-hidden text-white relative selection:bg-fuchsia-500/30">
+    <div className="flex min-h-screen bg-[#010103] text-white font-sans overflow-hidden selection:bg-cyan-500/40">
       
-      {/* 🌌 CYBER-NEXUS GLASSMORPHISM BACKGROUND */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[#05050A]">
-         {/* Neon Magenta Orb */}
-         <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-fuchsia-600/20 blur-[180px] rounded-full mix-blend-screen animate-[pulse_6s_ease-in-out_infinite]"></div>
-         {/* Neon Cyan Orb */}
-         <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-cyan-600/20 blur-[180px] rounded-full mix-blend-screen animate-[pulse_8s_ease-in-out_infinite_reverse]"></div>
-         {/* Cyber Grid */}
-         <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]"></div>
+      {/* 🌌 TITAN BACKGROUND FX (Isolated) */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(6,182,212,0.05)_0%,_transparent_70%)]"></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-cyan-900/10 blur-[140px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-fuchsia-900/10 blur-[140px] rounded-full"></div>
       </div>
 
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-24 hover:w-72 transition-all duration-700 border-r border-fuchsia-500/20 bg-black/40 backdrop-blur-3xl flex flex-col items-center py-10 z-50 group shadow-[10px_0_50px_rgba(0,0,0,0.5)]">
-        <motion.div whileHover={{ rotate: 180, scale: 1.1 }} transition={{ duration: 0.8 }} className="mb-16 cursor-pointer" onClick={() => setActiveMenu('DASHBOARD')}>
-          <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-fuchsia-500 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(217,70,239,0.4)]">
-            <Zap size={28} className="text-white fill-white" />
+      {/* 🚀 COMMAND SIDEBAR */}
+      <aside className="w-24 hover:w-72 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] border-r border-white/5 bg-black/50 backdrop-blur-3xl flex flex-col items-center py-10 z-[60] group shadow-2xl">
+        <div className="mb-20 cursor-pointer" onClick={() => setActiveMenu('DASHBOARD')}>
+          <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(6,182,212,0.4)] rotate-3 hover:rotate-0 transition-transform">
+            <Zap size={32} className="text-white fill-white" />
           </div>
-        </motion.div>
-        
-        <nav className="flex flex-col gap-8 flex-1 w-full px-6">
-          <SidebarBtn icon={<LayoutDashboard />} label="NEXUS_CORE" active={activeMenu === 'DASHBOARD'} onClick={() => setActiveMenu('DASHBOARD')} />
-          <SidebarBtn icon={<ShoppingCart />} label="RANK_MARKET" active={activeMenu === 'MARKET'} onClick={() => setActiveMenu('MARKET')} />
-          <SidebarBtn icon={<Users />} label="FACTION_UPLINK" active={activeMenu === 'CLANS'} onClick={() => setActiveMenu('CLANS')} />
-          <div className="h-px bg-gradient-to-r from-transparent via-fuchsia-500/30 to-transparent my-4 mx-2" />
-          <SidebarBtn icon={<ShieldCheck className={isAuthorized ? "text-fuchsia-400 drop-shadow-[0_0_10px_#d946ef]" : "text-cyan-600"} />} label="ADMIN_LOCK" onClick={() => setIsAdminOpen(true)} />
+        </div>
+
+        <nav className="flex flex-col gap-6 w-full px-4 flex-1">
+          <SideItem icon={<LayoutDashboard />} label="COMMAND_CENTER" active={activeMenu === 'DASHBOARD'} onClick={() => setActiveMenu('DASHBOARD')} />
+          <SideItem icon={<ShoppingCart />} label="RANK_MATRIX" active={activeMenu === 'MARKET'} onClick={() => setActiveMenu('MARKET')} />
+          <SideItem icon={<Users />} label="CLAN_UPLINK" active={activeMenu === 'CLANS'} onClick={() => setActiveMenu('CLANS')} />
+          <div className="h-[2px] bg-gradient-to-r from-transparent via-white/10 to-transparent my-6" />
+          <SideItem 
+            icon={<ShieldCheck className={isAuthorized ? "text-green-400 drop-shadow-[0_0_10px_#4ade80]" : "text-red-500"} />} 
+            label="NEXUS_ADMIN" 
+            onClick={() => setIsAdminOpen(true)} 
+          />
         </nav>
 
-        {/* AUDIO RELAY */}
-        <div className="mt-auto px-6 w-full pb-10">
-          <div className="bg-black/40 border border-fuchsia-500/20 rounded-[2.5rem] p-3 group/music hover:bg-white/5 transition-all overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-            <div className="flex items-center justify-center p-3 bg-fuchsia-500/10 rounded-2xl border border-fuchsia-500/20">
-               <Radio className={`text-fuchsia-400 ${isMusicPlaying ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`} size={20} />
-            </div>
-            <div className="hidden group-hover:flex flex-col gap-3 mt-4 animate-in fade-in slide-in-from-bottom-2">
-               <input value={ytLink} onChange={(e) => setYtLink(e.target.value)} placeholder="YOUTUBE_URL..." className="bg-black/80 border border-fuchsia-500/20 rounded-xl px-3 py-2 text-[10px] font-mono outline-none text-fuchsia-100 focus:border-fuchsia-500 transition-all" />
-               <button onClick={syncMusic} className="bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-fuchsia-500/30 text-white text-[10px] font-black py-2.5 rounded-xl uppercase hover:from-cyan-500 hover:to-fuchsia-500 hover:text-black transition-all">Engage_Relay</button>
-            </div>
+        <div className="mt-auto flex flex-col items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <p className="text-[10px] font-black tracking-[0.5em] text-cyan-500/50">VAULT_V18.3</p>
+          <div className="flex gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-bounce"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animate-bounce [animation-delay:0.2s]"></div>
           </div>
         </div>
       </aside>
 
-      {/* MEDIA BRIDGE */}
-      {currentTrackId && <div className="fixed -left-[9999px]"><iframe width="0" height="0" src={`https://www.youtube.com/embed/${currentTrackId}?autoplay=1`} allow="autoplay" /></div>}
-
-      {/* MAIN VIEWPORT */}
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto relative custom-scrollbar z-10">
+      {/* 🖥️ MAIN ENGINE */}
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto custom-scrollbar relative z-10">
         
-        {/* HEADER */}
-        <header className="flex items-center justify-between px-16 py-8 sticky top-0 bg-[#05050A]/70 backdrop-blur-3xl z-40 border-b border-fuchsia-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <div className="flex items-center gap-8">
-            <div>
-               <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">NORDEN<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_20px_#d946ef]">MC</span></h1>
-               {/* 🌟 TOP LEFT XP COUNTER */}
-               <div className="flex items-center gap-3 mt-3 ml-1">
-                  <div className="bg-black/50 border border-fuchsia-500/40 text-fuchsia-300 px-4 py-1.5 rounded-full text-[11px] font-black tracking-[0.2em] flex items-center gap-2 uppercase shadow-[0_0_20px_rgba(217,70,239,0.3)] backdrop-blur-md">
-                     <Star size={14} className="fill-fuchsia-400/50" /> TOTAL_XP: {adminXp.toLocaleString()}
-                  </div>
-                  <span className="text-[9px] font-mono text-cyan-400/60 tracking-[0.3em] uppercase animate-pulse">V17_CYBER_NEXUS</span>
-               </div>
-            </div>
+        {/* TITAN HEADER */}
+        <header className="px-16 py-12 flex justify-between items-center sticky top-0 bg-[#010103]/70 backdrop-blur-3xl z-40 border-b border-white/5 shadow-2xl">
+          <div className="flex items-end gap-6">
+            <h1 className="text-7xl font-black italic tracking-tighter uppercase leading-none">
+              NORDEN<span className="text-cyan-400 drop-shadow-[0_0_20px_#06b6d4]">MC</span>
+            </h1>
+            <p className="text-[12px] font-black text-white/20 tracking-[0.6em] mb-1">ULTRA_NEXUS</p>
           </div>
+
           <div className="flex items-center gap-10">
-            <div className="text-right hidden sm:block">
-               <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">GLOBAL_NETWORK</p>
-               <p className="text-xs font-black text-fuchsia-400 uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(217,70,239,0.5)]">UPSTREAM_SECURE</p>
+            <div className="relative group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-cyan-400 transition-colors" size={18} />
+              <input 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="SCAN_NORDEN_DATABASE..." 
+                className="bg-white/5 border border-white/10 rounded-3xl pl-14 pr-8 py-5 text-xs font-mono tracking-widest outline-none focus:border-cyan-500/50 transition-all w-[400px] shadow-inner" 
+              />
             </div>
-            <button className="bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-black font-black text-[11px] px-14 py-5 rounded-2xl shadow-[0_10px_40px_rgba(217,70,239,0.5)] hover:scale-105 hover:shadow-[0_20px_60px_rgba(217,70,239,0.7)] transition-all uppercase tracking-[0.2em] border border-white/20 relative overflow-hidden group">
-                <span className="relative z-10">PLAY.NORDENMC.COM</span>
-                <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-            </button>
+            <div className="flex flex-col items-end">
+               <span className="text-[10px] font-black text-cyan-400 tracking-[0.3em] mb-1">STATUS: OPERATIONAL</span>
+               <button className="bg-white text-black font-black text-xs px-12 py-5 rounded-[2rem] shadow-[0_20px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all uppercase tracking-widest border border-white/20">
+                 {SERVER_IP}
+               </button>
+            </div>
           </div>
         </header>
 
-        <main className="p-16 max-w-[1700px] mx-auto w-full">
+        <main className="p-16 max-w-[1800px] mx-auto w-full">
           <AnimatePresence mode="wait">
-            
-            {/* ---------------- DASHBOARD MATRIX ---------------- */}
             {activeMenu === 'DASHBOARD' && (
-              <motion.div key="DASHBOARD" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }} className="space-y-16">
+              <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5 }} className="space-y-24">
                 
-                {/* STATUS CARDS */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                  <StatCard icon={<Flame className="text-fuchsia-500" />} label="SESSIONS" value={onlinePlayers.toLocaleString()} />
-                  <StatCard icon={<Target className="text-cyan-500" />} label="GLOBAL_FRAGS" value="18.9M" />
-                  <StatCard icon={<Database className="text-purple-500" />} label="CORE_TPS" value="20.0" />
-                  <StatCard icon={<Signal className="text-emerald-400" />} label="WEBHOOK" value={webhookStatus} />
+                {/* MODE SELECTOR */}
+                <div className="bg-black/60 backdrop-blur-3xl p-3 rounded-3xl border border-white/10 w-fit mx-auto flex items-center gap-3 shadow-2xl relative">
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-[10px] font-black text-white/20 tracking-[1em] uppercase">Matrix_Switch</div>
+                  {GAME_MODES.map((mode) => (
+                    <button 
+                      key={mode} 
+                      onClick={() => setActiveMode(mode)}
+                      className={`relative px-10 py-4 rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all duration-300 ${activeMode === mode ? 'text-black' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+                    >
+                      {activeMode === mode && (
+                        <motion.div layoutId="modeGlow" className="absolute inset-0 bg-white rounded-2xl shadow-[0_0_30px_#fff]" />
+                      )}
+                      <span className="relative z-10">{mode}</span>
+                    </button>
+                  ))}
                 </div>
 
-                {/* GAME MODE SWITCHER (CYBER TABS) */}
-                <div className="flex flex-wrap items-center justify-center gap-4 bg-black/40 backdrop-blur-xl p-4 rounded-[2rem] border border-white/10 shadow-2xl">
-                    {GAME_MODES.map((mode) => (
-                        <button
-                            key={mode}
-                            onClick={() => setActiveMode(mode)}
-                            className={`relative px-8 py-4 rounded-xl font-black text-[11px] uppercase tracking-[0.3em] transition-all duration-300 ${activeMode === mode ? 'text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                        >
-                            {activeMode === mode && (
-                                <motion.div layoutId="activeModeTab" className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-xl shadow-[0_0_20px_rgba(217,70,239,0.5)]" transition={{ type: "spring", stiffness: 300, damping: 25 }} />
-                            )}
-                            <span className="relative z-10">{mode}</span>
-                        </button>
+                {/* THE TITAN PODIUM */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                  {filteredPlayers.slice(0, 3).map((p, i) => (
+                    <Podium key={p.name} player={p} rank={i+1} />
+                  ))}
+                </div>
+
+                {/* THE LIST ENGINE */}
+                <div className="space-y-6 pt-20 border-t border-white/5">
+                  <div className="flex items-center justify-between px-10">
+                    <h3 className="text-3xl font-black italic tracking-tighter text-white/40 uppercase">Global_Leaderboard // {activeMode}</h3>
+                    <div className="bg-cyan-500/10 border border-cyan-500/20 px-6 py-2 rounded-full text-[10px] font-black text-cyan-400 tracking-widest">
+                      ACTIVE_NODES: {filteredPlayers.length}
+                    </div>
+                  </div>
+                  <div className="grid gap-6">
+                    {filteredPlayers.map((p, i) => (
+                      <PlayerCard key={p.name} player={p} />
                     ))}
+                  </div>
                 </div>
-
-                <AnimatePresence mode="wait">
-                    <motion.div key={activeMode} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.4 }} className="space-y-16">
-                        {/* EDITABLE PLAYER PODIUM */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-8">
-                        {currentPlayers.slice(0,3).map((p, idx) => <PodiumCard key={`${activeMode}-${p.name}-${idx}`} player={p} idx={idx} onAction={() => pushLog(`[DATA_UPLINK] FETCHING ${p.name} STATS FOR ${activeMode}`)} />)}
-                        </div>
-
-                        {/* EDITABLE PLAYER ROWS */}
-                        <div className="space-y-6">
-                        {currentPlayers.map((p, idx) => (
-                            <motion.div key={`${activeMode}-row-${idx}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                                <PlayerRow player={p} onAction={() => pushLog(`[DEEP_SCAN] INITIATED ON ${p.name} (${activeMode})`)} />
-                            </motion.div>
-                        ))}
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
               </motion.div>
             )}
 
-            {/* ---------------- MARKET MATRIX (ALL RANKS, NO FLY) ---------------- */}
             {activeMenu === 'MARKET' && (
-              <motion.div key="MARKET" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5 }} className="space-y-12">
-                 
-                 <div className="text-center mb-16">
-                     <h2 className="text-5xl font-black italic uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-[0_0_20px_rgba(217,70,239,0.4)] mb-4">GLOBAL RANK MATRIX</h2>
-                     <p className="text-[12px] font-black text-white/40 uppercase tracking-[0.4em]">Secure your dominance across all game modes.</p>
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                 {['VIP_RANK', 'MVP_RANK', 'ELITE_RANK', 'OMEGA_RANK', 'TITAN_RANK', 'NEXUS_SUPREME'].map((item, i) => (
-                   <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} key={item} className="bg-black/60 backdrop-blur-2xl border border-fuchsia-500/20 p-12 rounded-[4rem] hover:bg-black/80 hover:border-cyan-400/50 transition-all duration-500 text-center group relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                      <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12 group-hover:rotate-0 transition-transform duration-700 text-fuchsia-500"><Crown size={180} /></div>
-                      <div className="w-24 h-24 bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 rounded-[2.5rem] mx-auto mb-10 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 border border-fuchsia-500/30 shadow-inner"><ShoppingCart className="text-cyan-300 drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]" size={36} /></div>
-                      <h3 className="text-3xl font-black italic mb-4 uppercase tracking-tighter text-white drop-shadow-md">{item.replace('_', ' ')}</h3>
-                      <p className="text-[9px] font-black text-white/30 tracking-[0.2em] mb-10 uppercase h-8">Unlocks premium global commands & kits.</p>
-                      <button onClick={() => initPurchase(item)} className="w-full bg-gradient-to-r from-cyan-500/80 to-fuchsia-500/80 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:from-cyan-400 hover:to-fuchsia-400 transition-all shadow-[0_0_30px_rgba(217,70,239,0.3)] border border-white/10 relative overflow-hidden">
-                          <span className="relative z-10">AUTHORIZE_PURCHASE</span>
-                      </button>
-                   </motion.div>
-                 ))}
-                 </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-3 gap-12 pt-10">
+                {globalRanks.map((rank, i) => (
+                  <RankCard key={rank.id} rank={rank} i={i} />
+                ))}
               </motion.div>
             )}
           </AnimatePresence>
         </main>
       </div>
 
-      {/* 💳 PURCHASE MODAL */}
-      <AnimatePresence>
-        {isPurchaseModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/95 backdrop-blur-3xl" onClick={() => setIsPurchaseModalOpen(false)} />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 40 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 40 }} className="bg-[#08080C] border border-fuchsia-500/40 w-full max-w-lg p-12 rounded-[4rem] relative z-[110] shadow-[0_0_100px_rgba(217,70,239,0.2)]">
-              <div className="text-center mb-10">
-                <div className="w-24 h-24 bg-gradient-to-tr from-cyan-400/20 to-fuchsia-500/20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-cyan-300 border border-cyan-400/30 shadow-[inset_0_0_20px_rgba(6,182,212,0.5)]"><User size={44} /></div>
-                <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-2 text-white">Identity Verification</h3>
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Target Payload: <span className="text-fuchsia-400 drop-shadow-[0_0_8px_#d946ef]">{selectedItem}</span></p>
-              </div>
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-cyan-400/70 uppercase tracking-[0.3em] ml-2">Minecraft IGN</label>
-                  <input type="text" placeholder="Enter Username..." value={mcUsername} onChange={(e) => setMcUsername(e.target.value)} className="w-full bg-black border border-white/10 p-7 rounded-[2rem] text-2xl font-mono text-fuchsia-300 outline-none focus:border-fuchsia-500 transition-all shadow-inner text-center" />
-                </div>
-                <button onClick={finalizePurchase} className="w-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-black py-7 rounded-[2rem] font-black uppercase tracking-[0.3em] hover:shadow-[0_0_40px_rgba(217,70,239,0.6)] transition-all mt-6 text-xs border border-white/20">TRANSMIT_FUNDS</button>
-                <button onClick={() => setIsPurchaseModalOpen(false)} className="w-full text-white/30 font-black text-[10px] uppercase tracking-[0.4em] mt-4 hover:text-red-400 transition-all">Abort_Protocol</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* 🔐 V17 CYBER ADMIN CONSOLE */}
+      {/* 🔐 THE OMNI-VAULT (ULTIMATE ADMIN PANEL) */}
       <AnimatePresence>
         {isAdminOpen && (
-          <motion.div initial={{ x: 900 }} animate={{ x: 0 }} exit={{ x: 900 }} transition={{ type: "spring", damping: 25, stiffness: 120 }} className="fixed right-0 top-0 h-full w-[750px] bg-[#020206]/90 border-l border-fuchsia-500/20 z-[60] p-12 shadow-[-100px_0_200px_rgba(0,0,0,0.9)] backdrop-blur-3xl overflow-y-auto custom-scrollbar">
-            
-            <div className="flex justify-between items-center mb-12 sticky top-0 bg-[#020206]/90 backdrop-blur-md py-4 z-20 border-b border-white/5">
-               <h3 className="text-3xl font-black italic tracking-tighter uppercase leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500">NEXUS_COMMAND</h3>
-               <button onClick={() => setIsAdminOpen(false)} className="text-white/40 hover:text-white font-black text-[10px] uppercase tracking-[0.3em] border border-white/10 px-5 py-3 rounded-xl hover:bg-white/10 transition-all">CLOSE_BAY [X]</button>
+          <motion.div 
+            initial={{ x: 1000 }} animate={{ x: 0 }} exit={{ x: 1000 }}
+            transition={{ type: "spring", damping: 35, stiffness: 200 }}
+            className="fixed right-0 top-0 h-full w-[800px] bg-[#020206] border-l border-white/10 z-[100] p-16 shadow-[-100px_0_150px_rgba(0,0,0,0.95)] backdrop-blur-[50px] overflow-y-auto custom-scrollbar"
+          >
+            {/* ADMIN HEADER */}
+            <div className="flex justify-between items-center mb-16 sticky top-0 bg-[#020206]/95 py-6 z-30 border-b border-white/10">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-4 text-cyan-400">
+                  <Gavel size={32} />
+                  <h2 className="text-4xl font-black italic tracking-tighter uppercase">NEXUS_OMNI_VAULT</h2>
+                </div>
+                <p className="text-[10px] font-black text-white/20 tracking-[0.4em] mt-1 ml-12 uppercase">Privileged_Access_Level_9</p>
+              </div>
+              <button 
+                onClick={() => setIsAdminOpen(false)} 
+                className="group flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl hover:bg-red-500 transition-all"
+              >
+                <X size={18} className="group-hover:rotate-90 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-black">Terminate</span>
+              </button>
             </div>
 
             {!isAuthorized ? (
-              <div className="flex flex-col items-center justify-center h-[70%]">
-                 <ShieldAlert size={120} className="text-fuchsia-500/30 mb-12 animate-[pulse_2s_ease-in-out_infinite] drop-shadow-[0_0_30px_#d946ef]" />
-                 <p className="text-fuchsia-400/70 font-black text-[11px] tracking-[0.6em] mb-10 uppercase text-center">Classified_Access_Only<br/>Enter_Passkey_Prople</p>
-                 <input type="password" placeholder="••••••••" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAuth()} className="bg-black border border-fuchsia-500/30 w-full p-8 rounded-[2.5rem] text-center text-4xl tracking-[0.5em] font-mono outline-none focus:border-cyan-400 transition-all mb-8 shadow-[inset_0_0_30px_rgba(217,70,239,0.1)] text-cyan-100" />
-                 <button onClick={handleAuth} className="w-full bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 border border-fuchsia-500/40 text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.4em] hover:from-cyan-500 hover:to-fuchsia-500 hover:text-black transition-all shadow-2xl">BREACH_FIREWALL</button>
+              <div className="flex flex-col items-center justify-center py-32">
+                <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="mb-12">
+                   <ShieldAlert size={120} className="text-red-500/20 drop-shadow-[0_0_50px_rgba(239,68,68,0.2)]" />
+                </motion.div>
+                <input 
+                  type="password" 
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (passwordInput === PASSKEY ? setIsAuthorized(true) : alert("ACCESS_DENIED"))}
+                  placeholder="DECRYPT_PASSKEY..." 
+                  className="bg-white/5 border-2 border-white/10 w-full max-w-md p-8 rounded-[2.5rem] text-center text-3xl tracking-[0.5em] font-mono outline-none focus:border-cyan-500 transition-all mb-8 shadow-2xl" 
+                />
+                <button 
+                  onClick={() => passwordInput === PASSKEY ? setIsAuthorized(true) : alert("ACCESS_DENIED")}
+                  className="w-full max-w-md bg-white text-black font-black py-6 rounded-[2rem] hover:bg-cyan-500 hover:shadow-[0_0_40px_rgba(6,182,212,0.4)] transition-all uppercase tracking-[0.3em] text-sm"
+                >
+                  INITIALIZE_UPLINK
+                </button>
               </div>
             ) : (
-              <div className="space-y-12 animate-in fade-in slide-in-from-right-10 duration-700 pb-20">
-                 
-                 {/* 🌟 PERSONAL ADMIN XP UPLINK */}
-                 <div className="bg-gradient-to-br from-cyan-900/20 to-fuchsia-900/10 border border-cyan-500/30 p-10 rounded-[3.5rem] relative overflow-hidden shadow-2xl backdrop-blur-xl">
-                    <div className="absolute top-0 right-0 p-6 opacity-[0.05] rotate-45 text-cyan-300"><Star size={180} /></div>
-                    <div className="flex items-center justify-between mb-8 relative z-10">
-                       <div className="flex items-center gap-4 text-cyan-400 drop-shadow-[0_0_10px_#22d3ee]">
-                          <Crown size={28} />
-                          <span className="font-black text-xs tracking-[0.4em] uppercase">Admin_XP_Inject</span>
-                       </div>
-                       <div className="px-5 py-2 rounded-full bg-cyan-500/20 text-cyan-200 text-[11px] font-black uppercase border border-cyan-500/40 tracking-widest">{adminXp.toLocaleString()} XP</div>
-                    </div>
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-8">Authorizing Entity: <span className="text-white drop-shadow-md">UTKARSH PANDEY</span></p>
-                    <div className="grid grid-cols-3 gap-5 relative z-10">
-                       <button onClick={() => grantSelfXp(100)} className="bg-cyan-500/10 border border-cyan-500/30 py-5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-cyan-100 hover:bg-cyan-400 hover:text-black transition-all shadow-md">+100</button>
-                       <button onClick={() => grantSelfXp(500)} className="bg-cyan-500/10 border border-cyan-500/30 py-5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-cyan-100 hover:bg-cyan-400 hover:text-black transition-all shadow-md">+500</button>
-                       <button onClick={() => grantSelfXp(1000)} className="bg-cyan-500/10 border border-cyan-500/30 py-5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-cyan-100 hover:bg-cyan-400 hover:text-black transition-all shadow-md">+1000</button>
-                    </div>
-                 </div>
-
-                 {/* ✏️ DYNAMIC LEADERBOARD OVERRIDE (Tied to activeMode) */}
-                 <div className="bg-black/60 border border-fuchsia-500/20 p-10 rounded-[3.5rem] shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-center gap-4 text-fuchsia-400 mb-6 drop-shadow-[0_0_10px_#d946ef]">
-                       <Edit3 size={28} />
-                       <span className="font-black text-xs tracking-[0.4em] uppercase">Matrix_Override</span>
-                    </div>
-                    <p className="text-[10px] font-black text-cyan-400/60 uppercase tracking-[0.2em] mb-8 leading-relaxed">
-                        Currently editing database for: <span className="text-fuchsia-300 font-bold bg-fuchsia-500/20 px-2 py-1 rounded-md border border-fuchsia-500/30">[{activeMode}]</span>
-                    </p>
-                    
-                    <div className="space-y-6">
-                       {currentPlayers.map((p, index) => (
-                         <div key={index} className="bg-black/80 border border-white/10 p-6 rounded-[2rem] flex flex-col gap-4 relative group shadow-inner">
-                            <div className="absolute top-0 right-0 p-4 opacity-[0.05] font-black text-5xl italic pointer-events-none text-fuchsia-300">{p.rank}</div>
-                            <div className="flex gap-4 relative z-10">
-                               <div className="flex-1">
-                                  <label className="text-[8px] font-black text-cyan-400/70 uppercase tracking-widest ml-2 mb-1 block">Entity Name</label>
-                                  <input type="text" value={p.name} onChange={(e) => handleLeaderboardEdit(index, 'name', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-black italic text-white outline-none focus:border-fuchsia-500 transition-colors" />
-                               </div>
-                               <div className="w-32">
-                                  <label className="text-[8px] font-black text-white/40 uppercase tracking-widest ml-2 mb-1 block">{activeMode} Stat</label>
-                                  <input type="text" value={p.kd} onChange={(e) => handleLeaderboardEdit(index, 'kd', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-mono text-cyan-300 outline-none focus:border-fuchsia-500 text-center transition-colors" />
-                               </div>
-                            </div>
-                            <div className="flex-1 relative z-10">
-                               <label className="text-[8px] font-black text-white/40 uppercase tracking-widest ml-2 mb-1 block">Class Tag</label>
-                               <input type="text" value={p.tag} onChange={(e) => handleLeaderboardEdit(index, 'tag', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-[10px] font-black tracking-[0.2em] text-fuchsia-300/80 outline-none focus:border-cyan-400 uppercase transition-colors" />
-                            </div>
-                         </div>
-                       ))}
-                    </div>
-                    <button onClick={() => pushLog(`[DATA] ${activeMode}_STATE_SAVED`)} className="w-full mt-8 bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 hover:from-cyan-500 hover:to-fuchsia-500 text-white/70 hover:text-black py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-3 border border-fuchsia-500/30"><Save size={16}/> COMMIT_CHANGES</button>
-                 </div>
-
-                 {/* 🔨 IP BAN MATRIX */}
-                 <div className="bg-red-950/20 border border-red-500/30 p-10 rounded-[3.5rem] relative shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-center gap-4 text-red-500 mb-8 drop-shadow-[0_0_10px_#ef4444]">
-                       <Ban size={28} />
-                       <span className="font-black text-xs tracking-[0.4em] uppercase">Global_Blacklist</span>
-                    </div>
-                    <div className="flex gap-4">
-                       <input type="text" placeholder="Target IPv4..." value={ipBanInput} onChange={(e) => setIpBanInput(e.target.value)} className="flex-1 bg-black/80 border border-red-500/30 p-5 rounded-[1.5rem] text-red-300 font-mono text-sm outline-none focus:border-red-500 transition-all shadow-inner" />
-                       <button onClick={executeIpBan} className="bg-red-600/20 border border-red-500/50 text-red-200 px-8 rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all">EXECUTE</button>
-                    </div>
-                    {bannedIps.length > 0 && (
-                      <div className="mt-6 space-y-2">
-                        <p className="text-[9px] font-black text-red-500/60 uppercase tracking-widest mb-3">Recent Exiles</p>
-                        {bannedIps.map((ip, i) => <div key={i} className="text-[11px] font-mono text-red-300 bg-red-950/40 p-3 rounded-xl border border-red-900/40">{ip}</div>)}
+              <div className="space-y-16 pb-32">
+                
+                {/* SECTION 1: DATABASE OVERRIDE */}
+                <div className="bg-gradient-to-br from-white/5 to-transparent p-12 rounded-[4rem] border border-white/10 shadow-2xl relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-cyan-400 rotate-12"><Database size={200}/></div>
+                   <div className="flex items-center justify-between mb-12">
+                      <div className="flex items-center gap-4">
+                        <Edit3 className="text-cyan-400" />
+                        <h4 className="text-sm font-black tracking-[0.3em] uppercase">MATRIX_EDITOR: {activeMode}</h4>
                       </div>
-                    )}
-                 </div>
+                      <button onClick={wipeMode} className="flex items-center gap-2 text-red-500 bg-red-500/10 px-4 py-2 rounded-xl text-[10px] font-black border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">
+                        <Trash2 size={14}/> WIPE_MATRIX
+                      </button>
+                   </div>
 
-                 {/* SYSTEM SYSLOG */}
-                 <div className="bg-black/90 border border-cyan-500/20 p-10 rounded-[3rem] font-mono text-[11px] h-[350px] overflow-y-auto text-cyan-300/60 custom-scrollbar shadow-[inset_0_0_30px_rgba(6,182,212,0.1)] relative">
-                    <div className="flex items-center gap-3 text-fuchsia-400 mb-8 border-b border-white/10 pb-6 sticky top-0 bg-black/95 backdrop-blur-md z-10"><Terminal size={16}/> CYBER_SYSLOG</div>
-                    <div className="space-y-4">
-                       {logs.map((log, i) => <div key={i} className="flex gap-6 leading-relaxed hover:text-white transition-colors"><span className="opacity-20 pointer-events-none text-cyan-500">0x{i.toString(16).toUpperCase()}</span><span>{log}</span></div>)}
+                   <div className="space-y-8 mb-12">
+                     {leaderboards[activeMode]?.map((p, idx) => (
+                       <div key={idx} className="bg-black/80 p-8 rounded-[2.5rem] border border-white/5 relative group">
+                          <button onClick={() => deletePlayer(idx)} className="absolute top-4 right-4 text-white/10 hover:text-red-500 transition-colors"><X size={16}/></button>
+                          <div className="grid grid-cols-2 gap-8">
+                             <div className="col-span-2">
+                               <label className="text-[9px] font-black text-cyan-400/50 uppercase tracking-widest mb-2 block">PLAYER_NAME</label>
+                               <input value={p.name} onChange={(e) => updatePlayer(idx, 'name', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-lg font-black italic outline-none focus:border-cyan-500" />
+                             </div>
+                             <div>
+                               <label className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2 block">KD_VALUE</label>
+                               <input value={p.kd} onChange={(e) => updatePlayer(idx, 'kd', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm font-mono outline-none focus:border-cyan-500" />
+                             </div>
+                             <div>
+                               <label className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2 block">TAG_IDENTIFIER</label>
+                               <input value={p.tag} onChange={(e) => updatePlayer(idx, 'tag', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-cyan-400" />
+                             </div>
+                          </div>
+                       </div>
+                     ))}
+                   </div>
+
+                   {/* INJECT NEW PLAYER NODE */}
+                   <div className="bg-cyan-500/5 border-2 border-dashed border-cyan-500/20 p-10 rounded-[3rem] space-y-6">
+                      <div className="flex items-center gap-3 text-cyan-400 mb-2">
+                        <UserPlus size={20} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Inject_New_Data_Node</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input placeholder="Username" value={newPlayer.name} onChange={(e) => setNewPlayer({...newPlayer, name: e.target.value})} className="bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-cyan-500" />
+                        <input placeholder="K/D Ratio" value={newPlayer.kd} onChange={(e) => setNewPlayer({...newPlayer, kd: e.target.value})} className="bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-cyan-500" />
+                      </div>
+                      <input placeholder="Special Tag (e.g. LEGEND #9)" value={newPlayer.tag} onChange={(e) => setNewPlayer({...newPlayer, tag: e.target.value})} className="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-cyan-500" />
+                      <button onClick={injectPlayer} className="w-full bg-cyan-500 text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.3em] hover:bg-white transition-all">EXECUTE_INJECTION</button>
+                   </div>
+                </div>
+
+                {/* SECTION 2: RANK ARCHITECT */}
+                <div className="bg-gradient-to-br from-fuchsia-950/10 to-transparent p-12 rounded-[4rem] border border-white/10 shadow-2xl relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-fuchsia-400 rotate-12"><Package size={200}/></div>
+                   <div className="flex items-center gap-4 mb-12">
+                      <Package className="text-fuchsia-400" />
+                      <h4 className="text-sm font-black tracking-[0.3em] uppercase">GLOBAL_RANK_ARCHITECT</h4>
+                   </div>
+
+                   <div className="space-y-6 mb-12">
+                     {globalRanks.map((rank, i) => (
+                       <div key={rank.id} className="flex items-center justify-between bg-black/60 p-6 rounded-3xl border border-white/5 group">
+                          <div className="flex flex-col gap-1">
+                            <input value={rank.name} onChange={(e) => updateRank(i, 'name', e.target.value)} className={`bg-transparent font-black italic uppercase text-2xl ${rank.color} outline-none`} />
+                            <input value={rank.description} onChange={(e) => updateRank(i, 'description', e.target.value)} className="bg-transparent text-[10px] text-white/20 font-medium outline-none w-[300px]" />
+                          </div>
+                          <input value={rank.price} onChange={(e) => updateRank(i, 'price', e.target.value)} className="bg-transparent text-right font-black italic text-white/50 outline-none text-xl" />
+                       </div>
+                     ))}
+                   </div>
+
+                   {/* CREATE NEW RANK NODE */}
+                   <div className="bg-fuchsia-500/5 border-2 border-dashed border-fuchsia-500/20 p-10 rounded-[3rem] space-y-6">
+                      <div className="flex items-center gap-3 text-fuchsia-400 mb-2">
+                        <Star size={20} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Synthesize_Rank_Node</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input placeholder="Rank Title" value={newRank.name} onChange={(e) => setNewRank({...newRank, name: e.target.value})} className="bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-fuchsia-500" />
+                        <input placeholder="Price Value" value={newRank.price} onChange={(e) => setNewRank({...newRank, price: e.target.value})} className="bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-fuchsia-500" />
+                      </div>
+                      <input placeholder="Description..." value={newRank.desc} onChange={(e) => setNewRank({...newRank, desc: e.target.value})} className="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-xs outline-none focus:border-fuchsia-500" />
+                      <button onClick={createRank} className="w-full bg-fuchsia-500 text-white font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all">DEPLOY_RANK_NODE</button>
+                   </div>
+                </div>
+
+                {/* CRITICAL COMMIT */}
+                <button 
+                  onClick={commitToVault} 
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black py-8 rounded-[3rem] shadow-[0_30px_70px_rgba(6,182,212,0.4)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.5em] flex items-center justify-center gap-6 group"
+                >
+                  <Save size={28} className="group-hover:animate-bounce" /> COMMIT_ALL_VAULT_CHANGES
+                </button>
+
+                {/* LIVE SYSLOG */}
+                <div className="bg-black p-10 rounded-[3.5rem] border border-white/5 font-mono text-[11px] text-cyan-500/40 h-64 overflow-y-auto custom-scrollbar shadow-inner relative">
+                  <div className="sticky top-0 bg-black/90 py-2 border-b border-white/5 mb-4 text-[9px] font-bold text-white/10 tracking-[0.5em]">LIVE_LOG_STREAM</div>
+                  {logs.map((log, i) => (
+                    <div key={i} className="mb-2 flex gap-4">
+                      <span className="opacity-20">[{i}]</span>
+                      <span className="hover:text-cyan-400 transition-colors cursor-default">{log}</span>
                     </div>
-                 </div>
-                 
-                 <button onClick={() => {setIsAuthorized(false); setPasswordInput('')}} className="w-full text-white/20 font-black text-[10px] uppercase tracking-[0.8em] mt-12 hover:text-red-500 transition-colors py-4">Terminate_Session</button>
+                  ))}
+                </div>
               </div>
             )}
           </motion.div>
@@ -493,60 +433,84 @@ export default function NordenNexusV17() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+// --- TITAN SUB-COMPONENTS ---
 
-function SidebarBtn({ icon, label, active = false, onClick }: any) {
+function SideItem({ icon, label, active, onClick }: any) {
   return (
-    <div onClick={onClick} className={`flex items-center gap-6 cursor-pointer group py-4 px-4 rounded-2xl transition-all duration-500 ${active ? 'bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 text-white border border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.3)]' : 'text-white/30 hover:text-white hover:bg-white/5'}`}>
-      <div className={`transition-transform duration-500 ${active ? 'scale-110 drop-shadow-[0_0_8px_#22d3ee]' : 'group-hover:scale-110'}`}>{icon}</div>
-      <span className="text-[11px] font-black tracking-[0.2em] hidden group-hover:block whitespace-nowrap uppercase animate-in slide-in-from-left-2">{label}</span>
-    </div>
+    <button onClick={onClick} className={`flex items-center gap-6 w-full py-5 px-5 rounded-[2rem] transition-all relative group ${active ? 'bg-cyan-500/10 text-cyan-400 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]' : 'text-white/20 hover:text-white hover:bg-white/5'}`}>
+      <div className={`${active ? 'scale-125 drop-shadow-[0_0_12px_#06b6d4]' : 'group-hover:scale-110'} transition-transform duration-500`}>{icon}</div>
+      <span className="text-[12px] font-black tracking-[0.2em] hidden group-hover:block whitespace-nowrap uppercase animate-in fade-in slide-in-from-left-4">{label}</span>
+      {active && <motion.div layoutId="sideInd" className="absolute left-0 top-4 bottom-4 w-1.5 bg-cyan-400 rounded-r-full shadow-[5px_0_20px_#06b6d4]" />}
+    </button>
   );
 }
 
-function StatCard({ icon, label, value }: any) {
+function Podium({ player, rank }: { player: any, rank: number }) {
+  const is1 = rank === 1;
   return (
-    <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-12 rounded-[3.5rem] hover:bg-white/[0.04] hover:border-fuchsia-500/40 transition-all duration-500 group overflow-hidden relative shadow-2xl">
-      <div className="absolute -bottom-6 -right-6 opacity-[0.03] group-hover:scale-150 transition-all duration-700">{icon}</div>
-      <div className="flex items-center gap-4 mb-6 opacity-60 font-black text-[10px] tracking-[0.3em] uppercase text-white drop-shadow-md">{icon} {label}</div>
-      <p className="text-5xl font-black italic tracking-tighter group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-fuchsia-400 transition-all leading-none text-white">{value}</p>
-    </div>
-  );
-}
-
-function PodiumCard({ player, idx, onAction }: any) {
-  const isW = idx === 0;
-  return (
-    <div className={`bg-gradient-to-b ${isW ? 'from-cyan-500/40 via-fuchsia-500/10 to-transparent shadow-[0_30px_80px_-20px_rgba(217,70,239,0.4)]' : 'from-white/10 to-transparent'} p-[2px] rounded-[4.5rem] group hover:-translate-y-2 transition-transform duration-500`}>
-      <div className="bg-[#05050A]/95 backdrop-blur-3xl rounded-[4.5rem] p-12 flex flex-col items-center border border-white/5 text-center relative overflow-hidden h-full">
-        {isW && <Crown className="mb-6 text-cyan-400 drop-shadow-[0_0_25px_#22d3ee]" size={48} />}
-        <img src={player.img} className={`w-44 h-44 rounded-[3.5rem] mb-10 border-4 ${isW ? 'border-cyan-400 shadow-[0_0_40px_rgba(6,182,212,0.4)] scale-110' : 'border-white/10 opacity-70 group-hover:opacity-100 group-hover:scale-105 group-hover:border-fuchsia-400/50'} transition-all duration-700`} />
-        <h2 className="text-4xl font-black italic tracking-tighter uppercase mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-fuchsia-500 transition-all text-white">{player.name}</h2>
-        <p className="text-[10px] tracking-[0.4em] text-fuchsia-400/80 font-black mb-12 uppercase">{player.tag}</p>
-        <button onClick={onAction} className={`w-full py-5 rounded-[2.5rem] font-black text-[11px] border tracking-[0.3em] transition-all uppercase ${isW ? 'bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-black border-transparent shadow-[0_10px_30px_rgba(217,70,239,0.4)] hover:shadow-[0_15px_40px_rgba(217,70,239,0.6)]' : 'bg-white/5 text-white/50 border-white/10 hover:bg-white hover:text-black shadow-inner'}`}>SCAN_ENTITY</button>
+    <div className={`bg-gradient-to-b ${is1 ? 'from-cyan-500/20 via-cyan-500/5 to-transparent border-cyan-500/40 shadow-[0_50px_100px_-20px_rgba(6,182,212,0.3)]' : 'from-white/5 to-transparent border-white/10'} border-2 p-16 rounded-[5rem] text-center relative group hover:-translate-y-4 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]`}>
+      {is1 && <Crown className="text-yellow-400 absolute -top-10 left-1/2 -translate-x-1/2 drop-shadow-[0_0_25px_#facc15] animate-bounce" size={64} />}
+      <div className="text-[120px] font-black italic text-white/[0.03] absolute top-10 right-10 select-none pointer-events-none">{rank}</div>
+      <img src={player.img} className={`w-48 h-48 rounded-[4rem] mx-auto mb-12 border-4 ${is1 ? 'border-cyan-400' : 'border-white/10'} group-hover:scale-110 transition-transform duration-700`} />
+      <h4 className="text-4xl font-black italic uppercase mb-3 group-hover:text-cyan-400 transition-colors drop-shadow-lg">{player.name}</h4>
+      <p className="text-[10px] font-black text-white/30 tracking-[0.5em] uppercase mb-12">{player.tag}</p>
+      <div className="pt-12 border-t border-white/5 flex justify-around">
+        <div>
+          <p className="text-[10px] font-black text-white/20 mb-1 tracking-widest uppercase">KD_RATIO</p>
+          <p className="text-3xl font-black italic text-white">{player.kd}</p>
+        </div>
+        <div className="h-10 w-px bg-white/5 self-center" />
+        <div>
+          <p className="text-[10px] font-black text-white/20 mb-1 tracking-widest uppercase">XP_LOAD</p>
+          <p className="text-3xl font-black italic text-cyan-400">{player.xp.toLocaleString()}</p>
+        </div>
       </div>
     </div>
   );
 }
 
-function PlayerRow({ player, onAction }: any) {
+function PlayerCard({ player }: { player: any }) {
   return (
-    <div className="bg-black/50 backdrop-blur-xl border border-white/10 rounded-[4rem] p-10 flex items-center justify-between group hover:border-cyan-400/40 hover:bg-white/[0.04] transition-all duration-500 relative overflow-hidden shadow-2xl">
-      <div className="flex items-center gap-12 relative z-10">
-        <span className="text-6xl font-black italic text-white/[0.05] group-hover:text-fuchsia-500/20 w-24 transition-all duration-500">{player.rank}</span>
-        <img src={player.img} className="w-20 h-20 rounded-[1.5rem] shadow-[0_0_20px_rgba(0,0,0,0.8)] border border-white/10 group-hover:border-cyan-400/50 transition-all duration-500" />
-        <div className="flex flex-col gap-2">
-           <h4 className="font-black italic text-4xl uppercase text-white group-hover:text-cyan-300 transition-colors tracking-tighter leading-none">{player.name}</h4>
-           <span className="text-[10px] font-black text-fuchsia-300/60 tracking-[0.4em] uppercase transition-all">{player.tag}</span>
+    <div className="bg-black/40 border border-white/5 p-10 rounded-[3.5rem] flex items-center justify-between group hover:border-cyan-500/40 hover:bg-white/[0.03] transition-all duration-700 shadow-2xl relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="flex items-center gap-14 relative z-10">
+        <span className="text-7xl font-black italic text-white/[0.04] w-24 group-hover:text-cyan-500/10 transition-all duration-700">{player.rank}</span>
+        <img src={player.img} className="w-20 h-20 rounded-[2rem] border-2 border-white/5 group-hover:border-cyan-400 group-hover:rotate-6 transition-all duration-500" />
+        <div className="flex flex-col">
+          <h4 className="text-4xl font-black italic uppercase text-white group-hover:text-cyan-300 transition-colors leading-none mb-2 tracking-tighter">{player.name}</h4>
+          <span className="text-[11px] font-black text-white/20 tracking-[0.4em] uppercase">{player.tag}</span>
         </div>
       </div>
       <div className="flex items-center gap-16 relative z-10">
-         <div className="text-center">
-            <p className="text-[10px] font-black text-cyan-400/50 mb-2 uppercase tracking-widest">{player.statType}</p>
-            <p className="text-3xl font-black italic leading-none text-white">{player.kd}</p>
-         </div>
-         <button onClick={onAction} className="w-16 h-16 rounded-[1.5rem] bg-white/5 flex items-center justify-center text-white/40 group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-fuchsia-500 group-hover:text-black transition-all group-hover:rotate-[360deg] shadow-2xl duration-700 border border-white/10 group-hover:border-transparent"><Crosshair size={24} /></button>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-white/20 mb-1 uppercase tracking-widest">KD_STAT</p>
+          <p className="text-4xl font-black italic text-white group-hover:scale-110 transition-transform">{player.kd}</p>
+        </div>
+        <div className={`w-32 py-5 rounded-2xl text-center text-[11px] font-black border tracking-[0.2em] transition-all shadow-lg ${player.statType === 'HT1' ? 'text-red-500 border-red-500/20 bg-red-500/5 group-hover:bg-red-500 group-hover:text-white' : 'text-cyan-400 border-cyan-400/20 bg-cyan-400/5 group-hover:bg-cyan-400 group-hover:text-black'}`}>
+          {player.statType}
+        </div>
+        <button className="w-16 h-16 rounded-[2rem] bg-white/5 flex items-center justify-center text-white/20 group-hover:bg-white group-hover:text-black transition-all group-hover:rotate-45 border border-white/10 shadow-2xl duration-700"><ArrowUpRight size={28}/></button>
       </div>
     </div>
+  );
+}
+
+function RankCard({ rank, i }: any) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
+      className="bg-black/60 border border-white/10 p-16 rounded-[5rem] text-center group hover:border-fuchsia-500/50 hover:bg-black/80 transition-all duration-700 shadow-2xl relative overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 p-12 opacity-[0.02] rotate-12 group-hover:rotate-0 transition-transform duration-1000 text-fuchsia-500"><Trophy size={200} /></div>
+      <div className="w-24 h-24 bg-gradient-to-br from-fuchsia-500/20 to-indigo-500/20 rounded-[2.5rem] mx-auto mb-12 flex items-center justify-center border border-fuchsia-500/30 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shadow-inner">
+        <ShoppingCart className="text-fuchsia-400 drop-shadow-[0_0_15px_#d946ef]" size={40} />
+      </div>
+      <h3 className={`text-4xl font-black italic mb-6 uppercase tracking-tighter drop-shadow-lg ${rank.color}`}>{rank.name}</h3>
+      <p className="text-[11px] font-medium text-white/30 mb-14 leading-relaxed tracking-wide h-12 overflow-hidden">{rank.description}</p>
+      <div className="flex items-center justify-between bg-black p-8 rounded-[2.5rem] border border-white/5 shadow-inner">
+        <span className="text-2xl font-black italic text-white/70">{rank.price}</span>
+        <button className="bg-white text-black text-[11px] font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all uppercase tracking-widest">ACQUIRE</button>
+      </div>
+    </motion.div>
   );
 }
